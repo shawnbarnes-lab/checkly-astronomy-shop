@@ -1,0 +1,18 @@
+{
+  "name": "astronomy-shop-synthetics",
+  "version": "1.0.0",
+  "description": "Checkly synthetic monitoring MVP for the OpenTelemetry Demo (Astronomy Shop)",
+  "private": true,
+  "scripts": {
+    "test:journey": "playwright test __checks__/storefront-purchase.spec.ts",
+    "checkly:test": "checkly test",
+    "checkly:deploy": "checkly deploy"
+  },
+  "author": "Shawnderrick Barnes",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "checkly": "^8.17.1"
+  }
+}
