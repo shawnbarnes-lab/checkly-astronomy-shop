@@ -25,7 +25,16 @@ class: with the `paymentFailure` flag at 100%, every container kept reporting he
 check failed at the confirmation step. That gap between "infra healthy" and "customer blocked" is
 what this check closes.
 
-**2. API check — product catalog** ([checks.check.ts](__checks__/checks.check.ts), every minute)
+**2. Browser check — homepage image render budget** ([homepage-render-performance.spec.ts](__checks__/homepage-render-performance.spec.ts), every 5 minutes)
+
+This one catches a failure class your current stack structurally cannot see. Your `imageSlowLoad`
+flag injects latency at the edge, Envoy fault injection on the image fetch, not inside any
+instrumented service. No backend span ever represents it, because no backend service is actually
+slow. We proved this: every container kept reporting healthy while the product image took 5.2
+seconds to arrive, over 15x the 2-second budget this check asserts. Distributed tracing has no
+span for "the customer is staring at a blank box." An outside timer does.
+
+**3. API check — product catalog** ([checks.check.ts](__checks__/checks.check.ts), every minute)
 
 `GET /api/products/OLJCESPC7Z` with assertions on status, product name, and a non-zero price
 (not just a 200). Two reasons for pinning this product: it's a real catalog item your customers
@@ -80,13 +89,18 @@ npx checkly login
 npx checkly deploy
 ```
 
-## Reproducing the incident class this was built for
+## Reproducing the incident classes this was built for
 
 ```bash
+# Payment errors, infra stays green:
 # Flip paymentFailure to 100% in opentelemetry-demo/src/flagd/demo.flagd.json,
 # or live via http://localhost:8080/feature. Every container stays healthy.
-# The journey check fails at order confirmation — the same gap your team
-# described. Flip it back to "off" and the check recovers immediately.
+# The journey check fails at order confirmation. Flip back to "off" to recover.
+
+# Nothing errors, it's just slow, and tracing can't see it:
+# Flip imageSlowLoad to "5sec" the same way. Every container stays healthy,
+# every trace stays clean, no service is actually down. The render-budget
+# check fails at ~5.2s against a 2s budget. Flip back to "off" to recover.
 ```
 
 ## Extending this
